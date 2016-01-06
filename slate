@@ -1,0 +1,121 @@
+#!/usr/bin/python
+from os import path
+from os import rename
+from datetime import datetime as dt
+import unicodedata
+import json
+from pymongo import MongoClient
+import ConfigParser
+from flask import Flask
+
+app = Flask(__name__)
+global_config = {}
+
+def load_config(global_config):
+    config = ConfigParser.ConfigParser()
+    config.read('/etc/slate/slate.conf')
+    global_config['db'] = {}
+    global_config['db']['db_url'] = config.get('database', 'db_url')
+    global_config['db']['db_name'] = config.get('database', 'db_name')
+    global_config['logfile'] = config.get('slate', 'logfile')
+    global_config['version'] = config.get('slate', 'version')
+    global_config['name'] = config.get('slate', 'name')
+    global_config['firstrun'] = config.get('slate', 'firstrun')
+    log('Completed loading config from slate.conf', '001')
+    return global_config
+
+def app_setup():
+    # set up Flask app
+    global db
+    client = MongoClient(str('mongodb://' + global_config['db']['db_url'] + ':27017'))
+    db_a = client[global_config['db']['db_name']]
+    db = db_a['slate']
+    log('Completed app setup.', '002')
+
+def log(msg, code, err=' '):
+    # first run
+    if global_config['firstrun'] == 1 or global_config['firstrun'] == '1':
+        f = open(global_config['logfile'], 'w')
+        f.write(dt.now().strftime('%Y/%m/%d %H:%M:%S:%f :: ') + '000' + ' :: Initialized the log file.\n')
+        f.close()
+        fr = ConfigParser.ConfigParser()
+        fr.read('slate.conf')
+        fr.set('slate', 'firstrun', '0')
+        with open('slate.conf', 'wb') as config_file:
+            fr.write(config_file)
+    # log rotate
+    if path.getsize(global_config['logfile']) >= 6553600:
+        ts = dt.now().strftime('%Y:%m:%d+%H:%M:%S:%f')
+        rename(global_config['logfile'], global_config['logfile'] + '.' + ts)
+        f = open(global_config['logfile'], 'w')
+        f.write('Rotated logs to file ' + global_config['logfile'] + '.' + ts + '\n')
+        f.close()
+    # logger
+    f = open(global_config['logfile'], 'a')
+    log_msg = dt.now().strftime('%Y/%m/%d %H:%M:%S:%f :: ') + code + ' :: ' + msg + ' [' + err + ']\n'
+    f.write(log_msg)
+    f.close()
+
+def get(key):
+    res = db.find_one({key : { '$exists' : True }}, projection={'_id' : False})
+    return json.dumps(res) + '\n'
+
+def post(key, value):
+    d = {}
+    d[key] = value
+    if db.find({key : { "$exists" : True} }).count() != 0:
+        return str(json.dumps(d)) + ' exists! Use /change to set a new value.'
+    else:
+        db.insert_one({key : value})
+        return str(json.dumps(d)) + '\n'
+
+def change(key, value):
+    d = {}
+    d[key] = value
+    db.update_one({ key : { '$exists' : True}}, { '$set' : {key : value}}, upsert=True)
+    return str(json.dumps(d)) + '\n'
+
+##################################### ROUTES
+@app.route('/get/<key>')
+def route_get(key):
+    try:
+        log('Got ' + key, '100')
+        return get(key)
+    except Exception as e:
+        log('Failed to get ' + key, '300', e)
+        return str(e)
+
+@app.route('/post/<key>:<value>')
+def route_post(key, value):
+    try:
+        log('Posted ' + key + ':' + value, '101')
+        return post(key, value)
+    except Exception as e:
+        log('Failed to post ' + key + ':' + value, '300', e)
+        return str(e)
+
+@app.route('/change/<key>:<value>')
+def route_change(key, value):
+    try:
+        log('Changed ' + key + ':' + value, '102')
+        return change(key, value)
+    except Exception as e:
+        log('Failed to change ' + key + ':' + value, '300', e)
+        return str(e)
+
+@app.route('/config')
+def route_config():
+    try:
+        log('Dumped config file ', '200')
+        return json.dumps(global_config, indent=4)
+    except Exceptopn as e:
+        log('Failed to dump config.', '300', e)
+        return str(e)
+
+##################################### MAIN
+if __name__ == '__main__':
+    load_config(global_config)
+    app_setup()
+    app.debug = False
+    log('Starting up Slate...', '003')
+    app.run(host='0.0.0.0', port='80')
