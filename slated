@@ -13,7 +13,7 @@ global_config = {}
 
 def load_config(global_config):
     config = ConfigParser.ConfigParser()
-    config.read('/etc/slate/slate.conf')
+    config.read('/etc/slate/slated.conf')
     global_config['db'] = {}
     global_config['db']['db_url'] = config.get('database', 'db_url')
     global_config['db']['db_name'] = config.get('database', 'db_name')
@@ -21,7 +21,7 @@ def load_config(global_config):
     global_config['version'] = config.get('slate', 'version')
     global_config['name'] = config.get('slate', 'name')
     global_config['firstrun'] = config.get('slate', 'firstrun')
-    log('Completed loading config from slate.conf', '001')
+    log('Completed loading config from slated.conf', '001')
     return global_config
 
 def app_setup():
@@ -39,9 +39,9 @@ def log(msg, code, err=' '):
         f.write(dt.now().strftime('%Y/%m/%d %H:%M:%S:%f :: ') + '000' + ' :: Initialized the log file.\n')
         f.close()
         fr = ConfigParser.ConfigParser()
-        fr.read('slate.conf')
+        fr.read('slated.conf')
         fr.set('slate', 'firstrun', '0')
-        with open('slate.conf', 'wb') as config_file:
+        with open('slated.conf', 'wb') as config_file:
             fr.write(config_file)
     # log rotate
     if path.getsize(global_config['logfile']) >= 6553600:
