@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ $USER != 'root' ]; then
+    echo 'You must be root!'
+    exit 1
+fi
+
+if [ $1 == 'slatectl' ]; then
+    DIR=/etc/slate
+    mkdir $DIR
+    cp slatectl $DIR/.
+    cp slatectl.conf $DIR/.
+    ln -s $DIR/slatectl /usr/bin/slatectl
+fi
+if [ $1 == 'slated' ]; then
+    DIR=/var/run/slated
+    mkdir $DIR
+    mkdir /etc/slated
+    cp slated $DIR/.
+    cp slated.conf /etc/slated/.
+    cp slated.service /usr/lib/systemd/system/.
+    systemctl daemon-reload
+fi
+
+echo 'Enable the slated daemon by typing "systemctl enable slated"'
+echo 'Start the slated daemon by typing "systemctl start slated"'
+echo ''
+echo 'Enjoy :)'
+
+exit 0
