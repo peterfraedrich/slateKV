@@ -1,5 +1,172 @@
 #!/usr/bin/python
-
+import os
+from sys import exit
+from sys import argv
+from datetime import datetime as dt
 import argparse
 import ConfigParser
 import json
+from urllib2 import urlopen as http
+
+global_config = {}
+
+class Color():
+    clear = '\033[0m'
+    bgred = '\033[101m'
+    bggrey = '\033[100m'
+    bggreen = '\033[102m'
+    bgblue = '\033[44m'
+    bgyellow = '\033[43m'
+    red = '\033[91m'
+    yellow = '\033[93m'
+    green = '\033[92m'
+    blue = '\033[34m'
+
+class Echo():
+    def err(self, msg):
+        print color.bgred + 'ERR:' + color.clear + color.red + ' ' + msg + color.clear
+    def warn(self, msg):
+        print color.bgyellow + 'WARN:' + color.clear + color.yellow + ' ' + msg + color.clear
+    def info(self, msg):
+        print color.bgblue + 'INFO:' + color.clear + color.blue + ' ' + msg + color.clear
+    def success(self, msg):
+        print color.bggreen + 'SUCCESS:' + color.clear + color.green + ' ' + msg + color.clear
+
+class set_url(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        fr = ConfigParser.ConfigParser(allow_no_value=True)
+        fr.read('/etc/slate/slatectl.conf')
+        fr.set('config', 'url', values[0])
+        with open('/etc/slate/slatectl.conf', 'wb') as config_file:
+            fr.write(config_file)
+        echo.success('Set SlateKV URL as ' + values[0])
+        log('Changed URL from ' + global_config['url'] + ' to ' + values[0], '500')
+        load_config(global_config)
+
+class set_logfile(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        fr = ConfigParser.ConfigParser(allow_no_value=True)
+        fr.read('/etc/slate/slatectl.conf')
+        fr.set('config', 'logfile', values[0])
+        with open('/etc/slate/slatectl.conf', 'wb') as config_file:
+            fr.write(config_file)
+        echo.success('Set logfile path to ' + values[0])
+        log('Changed logile path from ' + global_config['logfile'] + ' to ' + values[0], '501')
+        load_config(global_config)
+
+class get(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        url = global_config['url'] + 'get/' + values[0]
+        try:
+            get_results(http(url).read())
+        except Exception as (e):
+            echo.err(e)
+            log('error on --get', '100', e)
+
+class post(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        url = global_config['url'] + 'post/' + values[0]
+        try:
+            get_results(http(url).read())
+        except Exception as (e):
+            echo.err(e)
+            log('error on --post', '101', e)
+
+class change(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        url = global_config['url'] + 'change/' + values[0]
+        try:
+            get_results(http(url).read())
+        except Exception as (e):
+            echo.err(e)
+            log('error on --change', '102', e)
+
+class print_config(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        echo.info(str(global_config))
+
+echo = Echo()
+color = Color()
+
+def load_config(global_config):
+    config = ConfigParser.ConfigParser(allow_no_value=True)
+    config.read('/etc/slate/slatectl.conf')
+    global_config['url'] = config.get('config', 'url')
+    global_config['first_run'] = config.get('config', 'firstrun')
+    global_config['logfile'] = config.get('config', 'logfile')
+    return global_config
+
+def first_run():
+    if os.path.exists('/etc/slate/slatectl.conf') != True:
+        f = open('/etc/slate/slatectl.conf', 'w')
+        f.write('[config]\n')
+        f.write('url = \n')
+        f.write('logfile = \n')
+        f.write('firstrun = 0\n')
+        f.close()
+    else:
+        fr = ConfigParser.ConfigParser(allow_no_value=True)
+        fr.read('/etc/slate/slatectl.conf')
+        if fr.get('config', 'firstrun') == 1 or fr.get('config', 'firstrun') == '1':
+            fr.set('config', 'firstrun', '0')
+            with open('/etc/slate/slatectl.conf', 'wb') as config_file:
+                fr.write(config_file)
+
+def log_rotate():
+    if global_config['logfile'] != '':
+        if os.path.exists(global_config['logfile']) != True:
+            f = open(global_config['logfile'], 'w')
+            f.write('Initialized the log file\n')
+            f.close()
+        if os.path.getsize(global_config['logfile']) >= 6553600:
+            ts = dt.now().strftime('%Y:%m:%d+%H:%M:%S:%f')
+            rename(global_config['logfile'], global_config['logfile'] + '.' + ts)
+            f = open(global_config['logfile'], 'w')
+            f.write('Rotated logs to file ' + global_config['logfile'] + '.' + ts + '\n')
+            f.close()
+            return
+        else:
+            return
+    else:
+        return
+
+def log(msg, code, err=' '):
+    if global_config['logfile'] != '':
+        f = open(global_config['logfile'])
+        f.write(dt.now().strftime('%Y:%m:%d+%H:%M:%S:%f') + ' :: ' + code + ' :: ' + msg + ' [' + err + ']\n')
+        f.close()
+
+def url_check():
+    if global_config['url'] == '':
+        echo.err('You must specify a SlateKV URL before this tool will do anything.')
+
+def parse_args():
+    if len(argv) == 1:
+        echo.warn('No arguments supplied, nothing to do!')
+        exit(1)
+    else:
+        parser = argparse.ArgumentParser(prog='Slatectl', description='Slatectl is a CLI client for SlateKV.')
+        parser.add_argument('--set-url', nargs=1, help='Sets the SlateKV URL. (ex. http://someurl/)', metavar='URL', action=set_url)
+        parser.add_argument('--set-logfile', nargs=1, help='Sets a log file path. Default is no logging. (ex. /var/log/slatectl.log)', metavar='PATH', action=set_logfile)
+        parser.add_argument('--get', nargs=1, help='Gets a value from a supplied key.', metavar='KEY', action=get)
+        parser.add_argument('--post', nargs=1, help='Saves a key:value pair to the store.', metavar='KEY:VALUE', action=post)
+        parser.add_argument('--change', nargs=1, help='Changes an existing key:value pair. Does nothing if [key] doesnt exist.', metavar='KEY:VALUE', action=change)
+        parser.add_argument('--config', nargs=0, help='Prints the config', action=print_config)
+        args = parser.parse_args()
+        return
+
+def get_results(res):
+    if '/change' in res:
+        echo.err(res)
+    elif 'null' in res:
+        echo.err('Key does not exist! Try something else.')
+    else:
+        echo.success(res)
+
+if __name__ == '__main__':
+    first_run()
+    load_config(global_config)
+    log_rotate()
+    parse_args()
+    url_check()
+    exit(0)
