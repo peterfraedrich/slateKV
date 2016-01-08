@@ -58,7 +58,7 @@ class get(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         url = global_config['url'] + 'get/' + values[0]
         try:
-            get_results(http(url).read())
+            get_results(http(url).read().strip('\n'))
         except Exception as (e):
             echo.err(e)
             log('error on --get', '100', e)
@@ -67,7 +67,7 @@ class post(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         url = global_config['url'] + 'post/' + values[0]
         try:
-            get_results(http(url).read())
+            get_results(http(url).read().strip('\n'))
         except Exception as (e):
             echo.err(e)
             log('error on --post', '101', e)
@@ -76,7 +76,7 @@ class change(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         url = global_config['url'] + 'change/' + values[0]
         try:
-            get_results(http(url).read())
+            get_results(http(url).read().strip('\n'))
         except Exception as (e):
             echo.err(e)
             log('error on --change', '102', e)
