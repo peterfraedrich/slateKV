@@ -10,9 +10,9 @@ class slate:
         else:
             q = url + 'get/' + query
             try:
-                return http(q).read().strip('\n')
+                return str(http(q).read()).strip('\n')
             except Exception as (e):
-                raise IOError('Unable to reach SlateKV URL. Err:'  + e)
+                raise IOError('Unable to reach SlateKV URL. Err:'  + str(e))
 
     def post(self, query, url, **kwargs):
         if len(query.split(':')) != 2:
@@ -20,9 +20,9 @@ class slate:
         else:
             q = url + 'post/' + query
             try:
-                return http(q).read.strip('\n')
+                return str(http(q).read()).strip('\n')
             except Exception as (e):
-                raise IOError('Unable to reach SlateKV URL. Err:'  + e)
+                raise IOError('Unable to reach SlateKV URL. Err:'  + str(e))
 
     def change(self, query, url, **kwargs):
         if len(query.split(':')) != 2:
@@ -30,6 +30,6 @@ class slate:
         else:
             q = url + 'change/' + query
             try:
-                return http(q).read.strip('\n')
+                return str(http(q).read()).strip('\n')
             except Exception as (e):
-                raise IOError('Unable to reach SlateKV URL. Err:'  + e)
+                raise IOError('Unable to reach SlateKV URL. Err:'  + str(e))
