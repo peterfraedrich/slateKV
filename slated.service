@@ -7,8 +7,8 @@ After=network.target
 Type=simple
 User=root
 Group=root
-WorkingDirectory=/etc/slate
-ExecStart=/usr/bin/slate
+WorkingDirectory=/etc/slated
+ExecStart=/var/run/slated
 
 # Give a reasonable amount of time for the server to start up/shut down
 TimeoutSec=300
