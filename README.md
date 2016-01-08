@@ -76,9 +76,9 @@ $> SUCCESS: { "linus" : "shepherd" }
 
 ### slatelib.py
 `slatelib.py` is the SlateKV Python library which allows developers and operations people to use the SlateKV in their scripts. The library exposes the following methods:
-* `slate.get(query, url)` -- reruns a JSON string of the query results
-* `slate.post(keyvalue, url)` -- returns a JSON string of the key:value submitted
-* `slate.change(key_value, url)` -- -- returns a JSON string of the key:value submitted
+* `Slate.get(query, url)` -- reruns a JSON string of the query results
+* `Slate.post(keyvalue, url)` -- returns a JSON string of the key:value submitted
+* `Slate.change(key_value, url)` -- -- returns a JSON string of the key:value submitted
 
 To use the library, simply import it:
 
