@@ -5,6 +5,15 @@ if [ $USER != 'root' ]; then
     exit 1
 fi
 
+if [ ! $1 ]; then
+    echo 'You must supply an argument:'
+    echo './INSTALL { slatectl | slated }'
+    echo ''
+    echo 'Use ./INSTALL slatectl to install the SlateKV CLI tool'
+    echo 'Use ./INSTALL slated to install the SlateKV server'
+    exit 1
+fi
+
 if [ $1 == 'slatectl' ]; then
     DIR=/etc/slate
     mkdir $DIR
@@ -12,6 +21,7 @@ if [ $1 == 'slatectl' ]; then
     cp slatectl.conf $DIR/.
     ln -s $DIR/slatectl /usr/bin/slatectl
 fi
+
 if [ $1 == 'slated' ]; then
     DIR=/var/run/slated
     mkdir $DIR
@@ -20,11 +30,13 @@ if [ $1 == 'slated' ]; then
     cp slated.conf /etc/slated/.
     cp slated.service /usr/lib/systemd/system/.
     systemctl daemon-reload
+    yum install -y python-pip || apt-get python-pip
+    pip install flask
+    pip install pymongo
+    echo 'Enable the slated daemon by typing "systemctl enable slated"'
+    echo 'Start the slated daemon by typing "systemctl start slated"'
+    echo ''
+    echo 'Enjoy :)'
 fi
-
-echo 'Enable the slated daemon by typing "systemctl enable slated"'
-echo 'Start the slated daemon by typing "systemctl start slated"'
-echo ''
-echo 'Enjoy :)'
 
 exit 0
