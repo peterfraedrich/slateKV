@@ -1,9 +1,8 @@
 #!/usr/bin/python
 from datetime import datetime as dt
-import json
 from urllib2 import urlopen as http
 
-class slate:
+class Slate:
     def get(self, query, url, **kwargs):
         if ':' in query:
             raise TypeError('Query must be single key only!')
