@@ -4,6 +4,9 @@
 ### Why do I need this?
 You probably don't, but if you did, I could imagine you using it for something like sharing confguration between scripts / servers / etc., using it in place of `etcd` for service discovery and whatnot, storing clustering information, or whatever you would need a key/value store for.
 
+### Why not redis?
+Man, idk. Use redis if you want. Or use SlateKV. I kinda don't care.
+
 ### SlateKV has 3 parts:
 * `slated` -- *the HTTP front-end for MongoDB that takes care of all the work*
 * `slatectl` -- *a CLI client used for interacting with slated*
@@ -38,3 +41,65 @@ If we wanted to update the value for `lucy`, all we need to do is use the `chang
 ```
 http://<someurl>/post/lucy:real_estate_agent
 ```
+Which will return the query object in JSON:
+```
+{ "lucy" : "real_estate_agent" }
+```
+
+The `slated.conf` file contains all of the configuration for the `slated` server. To set the location of the MongoDB instance you would like to use, simply put the DB's IP or FQDN in the `db_url` section of the conf. If you are running MongoDB on a non-standard (not `:27017`) port, you can change the port in the config file as well.
+
+**slated requires the following dependencies:**
+* `pymongo` -- python mongodb driver
+* `flask` -- python WSGI server
+
+### slatectl
+`slatectl` is the CLI tool for interacting with `slated`. `slatectl` used the following syntax:
+```
+slatectl --flag argument
+```
+Available flags are:
+* `--get <key>` -- returns a JSON object if the key exists
+* `--post <key:value>` -- adds a new key:value pair to the store
+* `--change <key:value>` -- changes the value of an existing key:value pair
+* `--set-url <http://<someurl>/>` -- sets the URL of the `slated` server
+* `--set-logfile </some/path>` -- sets the path of the logfile, default is no logging
+* `--config` -- prints the contents of `slatectl.conf` as JSON
+
+Example:
+```
+$> slatectl --post linus:shepherd
+```
+Which will return:
+```
+$> SUCCESS: { "linus" : "shepherd" }
+```
+
+### slatelib.py
+`slatelib.py` is the SlateKV Python library which allows developers and operations people to use the SlateKV in their scripts. The library exposes the following methods:
+* `slate.get(query, url)` -- reruns a JSON string of the query results
+* `slate.post(keyvalue, url)` -- returns a JSON string of the key:value submitted
+* `slate.change(key_value, url)` -- -- returns a JSON string of the key:value submitted
+
+To use the library, simply import it:
+
+```
+from slatelib.py import Slate
+slate = Slate()
+
+print slate.get('lucy', http://<someurl>/)
+```
+This will print the following string:
+```
+{ "lucy" : "real_estate_agent" }
+```
+
+#### Limitations
+Due to not (yet) implementing URI encoding, spaces are not supported in `keys` or `values`.
+
+#### Future Plans
+* URI encoding to allow spaces to be put into `values`
+* Add function to get a list of existing keys in the KV store
+* Create our own database engine to replace MongoDB
+
+#### Open Source
+I'm probably a shit programmer that writes sloppy code. If anyone has ideas on how to do things faster/better/stronger feel free to branch and code away.
